@@ -36,6 +36,11 @@
             margin: 10px 0;
             background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
+            text-decoration: none;
+            text-align: center;
+        }
+        .btn-outline {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
         }
         .server-item {
             display: flex;
@@ -45,6 +50,37 @@
             border: 1px solid #e0e0e0;
             border-radius: 8px;
             margin-bottom: 10px;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            margin: 15px 0;
+        }
+        .stat-item {
+            text-align: center;
+            flex: 1;
+        }
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .dash {
+            text-align: center;
+            color: #999;
+            font-size: 18px;
+            padding: 20px;
+        }
+        .link-info {
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+            margin-top: 5px;
         }
     </style>
 </head>
@@ -57,27 +93,41 @@
 
         <div class="card">
             <h2>📊 Ваш аккаунт</h2>
-            <p>Баланс: <strong id="balance">0</strong> руб</p>
-            <p>Трафик: <strong id="traffic">100 GB</strong></p>
-            <button class="btn" onclick="showAlert('Пополнение баланса')">💳 Пополнить</button>
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="balance">0</div>
+                    <div class="stat-label">Баланс (руб)</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">0/100</div>
+                    <div class="stat-label">Трафик (GB)</div>
+                </div>
+            </div>
+            <button class="btn" onclick="showAlert('Пополнение баланса')">💳 Пополнить баланс</button>
         </div>
 
         <div class="card">
-            <h2>🌍 Серверы</h2>
+            <h2>🌍 Доступные серверы</h2>
             <div class="server-item">
-                <span>🇩🇪 Германия</span>
-                <span style="color: green;">Online</span>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 20px;">🇩🇪</span>
+                    <div>
+                        <div style="font-weight: 600;">Германия #1</div>
+                        <div style="font-size: 12px; color: #666;">Франкфурт</div>
+                    </div>
+                </div>
+                <span style="color: green; font-size: 12px; background: #e8f5e8; padding: 4px 8px; border-radius: 12px;">Online</span>
             </div>
-    
-            <button class="btn" onclick="downloadConfig()">⬇️ Скачать конфиг</button>
+            
+            <a href="https://getoutline.org/intl/ru/get-started/" class="btn btn-outline" target="_blank">
+                ⬇️ Скачать Outline Client
+            </a>
+            <div class="link-info">Откроется в браузере</div>
         </div>
 
         <div class="card">
             <h2>📖 Инструкция</h2>
-            <p>1. Скачайте конфиг</p>
-            <p>2. Установите OpenVPN</p>
-            <p>3. Импортируйте конфиг</p>
-            <p>4. Подключитесь!</p>
+            <div class="dash">—</div>
         </div>
     </div>
 
@@ -94,10 +144,6 @@
             } else {
                 alert(message);
             }
-        }
-        
-        function downloadConfig() {
-            showAlert('Конфиг скачан! Используйте OpenVPN для подключения.');
         }
         
         // Инициализация при загрузке
