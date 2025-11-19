@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VPN Service - Telegram Mini App</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+        .container { max-width: 400px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 30px; color: white; }
+        .header h1 { font-size: 28px; margin-bottom: 10px; }
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 10px 0;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+        .server-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔒 VPN Service</h1>
+            <p>Ваш безопасный интернет в Telegram</p>
+        </div>
+
+        <div class="card">
+            <h2>📊 Ваш аккаунт</h2>
+            <p>Баланс: <strong id="balance">100</strong> руб</p>
+            <p>Трафик: <strong id="traffic">0.5/1.0 GB</strong></p>
+            <button class="btn" onclick="showAlert('Пополнение баланса')">💳 Пополнить</button>
+        </div>
+
+        <div class="card">
+            <h2>🌍 Серверы</h2>
+            <div class="server-item">
+                <span>🇩🇪 Германия</span>
+                <span style="color: green;">Online</span>
+            </div>
+            <div class="server-item">
+                <span>🇺🇸 США</span>
+                <span style="color: green;">Online</span>
+            </div>
+            <div class="server-item">
+                <span>🇳🇱 Нидерланды</span>
+                <span style="color: green;">Online</span>
+            </div>
+            <button class="btn" onclick="downloadConfig()">⬇️ Скачать конфиг</button>
+        </div>
+
+        <div class="card">
+            <h2>📖 Инструкция</h2>
+            <p>1. Скачайте конфиг</p>
+            <p>2. Установите OpenVPN</p>
+            <p>3. Импортируйте конфиг</p>
+            <p>4. Подключитесь!</p>
+        </div>
+    </div>
+
+    <script>
+        // Инициализация Telegram Web App
+        let tg = window.Telegram.WebApp;
+        
+        function showAlert(message) {
+            if (tg && tg.showPopup) {
+                tg.showPopup({
+                    title: 'Уведомление',
+                    message: message
+                });
+            } else {
+                alert(message);
+            }
+        }
+        
+        function downloadConfig() {
+            showAlert('Конфиг скачан! Используйте OpenVPN для подключения.');
+        }
+        
+        // Инициализация при загрузке
+        document.addEventListener('DOMContentLoaded', function() {
+            if (tg) {
+                tg.expand(); // Раскрыть на весь экран
+                tg.BackButton.hide();
+                
+                // Можно получить данные пользователя
+                const user = tg.initDataUnsafe?.user;
+                if (user) {
+                    console.log('Telegram User:', user);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
