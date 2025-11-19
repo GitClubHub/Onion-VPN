@@ -82,6 +82,14 @@
             text-align: center;
             margin-top: 5px;
         }
+        .payment-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            font-size: 14px;
+            color: #666;
+        }
     </style>
 </head>
 <body>
@@ -103,7 +111,16 @@
                     <div class="stat-label">Трафик (GB)</div>
                 </div>
             </div>
-            <button class="btn" onclick="showAlert('Пополнение баланса')">💳 Пополнить баланс</button>
+            
+            <button class="btn" onclick="showPaymentOptions()">💳 Пополнить баланс</button>
+            
+            <div class="payment-info">
+                💡 <strong>Как пополнить:</strong><br>
+                1. Нажмите кнопку выше<br>
+                2. Выберите сумму в Telegram<br>
+                3. Оплатите картой<br>
+                4. Баланс обновится автоматически
+            </div>
         </div>
 
         <div class="card">
@@ -135,10 +152,24 @@
         // Инициализация Telegram Web App
         let tg = window.Telegram.WebApp;
         
+        function showPaymentOptions() {
+            // Отправляем данные в Telegram бота для показа кнопок оплаты
+            if (tg && tg.sendData) {
+                const data = {
+                    action: 'show_payment_options',
+                    user_id: tg.initDataUnsafe?.user?.id || 'unknown'
+                };
+                tg.sendData(JSON.stringify(data));
+            } else {
+                // Если не в Telegram, показываем инструкцию
+                showAlert('Для пополнения баланса:\n\n1. Закройте мини-приложение\n2. Напишите боту команду /pay\n3. Выберите сумму: 100, 200, 500 или 1000 руб\n4. Оплатите картой');
+            }
+        }
+        
         function showAlert(message) {
             if (tg && tg.showPopup) {
                 tg.showPopup({
-                    title: 'Уведомление',
+                    title: 'Пополнение баланса',
                     message: message
                 });
             } else {
@@ -149,14 +180,18 @@
         // Инициализация при загрузке
         document.addEventListener('DOMContentLoaded', function() {
             if (tg) {
-                tg.expand(); // Раскрыть на весь экран
+                tg.expand();
                 tg.BackButton.hide();
                 
-                // Можно получить данные пользователя
                 const user = tg.initDataUnsafe?.user;
                 if (user) {
                     console.log('Telegram User:', user);
                 }
+                
+                // Обработчик данных от бота
+                tg.onEvent('viewportChanged', function() {
+                    // Можно добавить логику обновления баланса
+                });
             }
         });
     </script>
