@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VPN Service - Telegram Mini App</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script src="https://yookassa.ru/checkout-widget/v1/checkout-widget.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
@@ -45,6 +44,10 @@
         }
         .btn-success {
             background: linear-gradient(135deg, #4CAF50, #45a049);
+        }
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
         .server-item {
             display: flex;
@@ -117,10 +120,6 @@
             background: #f8f9fa;
             border-radius: 10px;
         }
-        #checkout-container {
-            margin: 15px 0;
-            min-height: 100px;
-        }
         .payment-success {
             background: #d4edda;
             color: #155724;
@@ -136,6 +135,24 @@
             border-radius: 10px;
             margin: 15px 0;
             text-align: center;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
@@ -178,11 +195,14 @@
                            min="10" max="15000" oninput="updateCustomAmount()">
                 </div>
                 
-                <div id="checkout-container"></div>
-                
                 <button id="pay-button" class="btn btn-success" onclick="createPayment()" style="display: none;">
                     💳 Оплатить <span id="selected-amount">0</span> руб
                 </button>
+
+                <div id="payment-loading" class="loading" style="display: none;">
+                    <div class="loader"></div>
+                    <div>Создаем платеж...</div>
+                </div>
                 
                 <button class="btn" onclick="hidePaymentSection()" style="background: #6c757d; margin-top: 10px;">
                     Отмена
@@ -191,6 +211,10 @@
 
             <div id="payment-success" class="payment-success" style="display: none;">
                 ✅ Платеж успешно завершен! Баланс пополнен.
+            </div>
+
+            <div id="payment-error" class="payment-error" style="display: none;">
+                ❌ Ошибка платежа
             </div>
         </div>
 
@@ -223,33 +247,31 @@
         // Инициализация Telegram Web App
         let tg = window.Telegram.WebApp;
         let selectedAmount = 0;
-        let checkout;
 
-        // Настройки ЮКассы (ТЕСТОВЫЕ)
-        const YOOKASSA_SHOP_ID = 'WID1Xwp2NqxOeQ82EEEvsDhLI_dEcEGKeLrxr3qTKLk'; // Ваш тестовый shopId
-        const YOOKASSA_API_KEY = 'test_WID1Xwp2NqxOeQ82EEEvsDhLI_dEcEGKeLrxr3qTKLk'; // Ваш тестовый API ключ
+        // 🔧 НАСТРОЙКИ - ЗАМЕНИТЕ НА ВАШ ДОМЕН!
+        const API_BASE_URL = "https://your-backend-domain.com"; // Замените на ваш домен бэкенда
 
-        // Инициализация платежного виджета
-        function initPaymentWidget() {
-            checkout = new window.YooMoneyCheckoutWidget({
-                // В тестовом режиме виджет будет работать без confirmation_token
-                // В реальном режиме нужно получать token с бэкенда
-                error_callback: function(error) {
-                    console.error('Ошибка платежа:', error);
-                    showPaymentError('Ошибка платежной системы: ' + error.message);
-                }
-            });
-            
-            // Рендерим виджет (пустой контейнер для начала)
-            checkout.render('checkout-container');
+        // Загрузка баланса при старте
+        async function loadUserBalance() {
+            try {
+                const user_id = tg.initDataUnsafe?.user?.id;
+                if (!user_id) return;
+
+                const response = await fetch(`${API_BASE_URL}/api/user/${user_id}/balance`);
+                const data = await response.json();
+                
+                document.getElementById('balance').textContent = data.balance;
+            } catch (error) {
+                console.error('Ошибка загрузки баланса:', error);
+            }
         }
 
         function showPaymentSection() {
             document.getElementById('payment-section').style.display = 'block';
             document.getElementById('payment-success').style.display = 'none';
+            document.getElementById('payment-error').style.display = 'none';
             selectedAmount = 0;
             updatePayButton();
-            initPaymentWidget();
         }
         
         function hidePaymentSection() {
@@ -294,7 +316,7 @@
             }
         }
 
-        // Создание платежа через ЮКассу
+        // 🔄 Создание платежа через бэкенд
         async function createPayment() {
             if (selectedAmount < 10) {
                 showAlert('Минимальная сумма пополнения - 10 рублей');
@@ -302,57 +324,119 @@
             }
 
             try {
-                // В ТЕСТОВОМ РЕЖИМЕ - имитируем успешный платеж
-                // В РЕАЛЬНОМ РЕЖИМЕ здесь будет запрос к вашему бэкенду
+                // Показываем загрузку
+                document.getElementById('pay-button').style.display = 'none';
+                document.getElementById('payment-loading').style.display = 'block';
+
+                const user_id = tg.initDataUnsafe?.user?.id;
+                if (!user_id) {
+                    throw new Error('Не удалось получить ID пользователя');
+                }
+
+                // Создаем платеж через бэкенд
+                const response = await fetch(`${API_BASE_URL}/api/payment/create`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_id: user_id,
+                        amount: selectedAmount
+                    })
+                });
+
+                const result = await response.json();
                 
-                showAlert(`Тестовый платеж на ${selectedAmount} руб\n\nВ реальном приложении здесь откроется форма ЮКассы`);
-                
-                // Имитация успешного платежа (для демо)
-                setTimeout(() => {
-                    processSuccessfulPayment(selectedAmount);
-                }, 2000);
+                if (result.success) {
+                    showAlert(`Платеж создан! Открываем страницу оплаты...`);
+                    
+                    // Открываем платежную форму ЮKassa в новом окне
+                    window.open(result.confirmation_url, '_blank');
+                    
+                    // Запускаем проверку статуса
+                    checkPaymentStatus(result.payment_id, user_id);
+                } else {
+                    throw new Error(result.detail || 'Ошибка при создании платежа');
+                }
 
             } catch (error) {
                 console.error('Ошибка создания платежа:', error);
-                showPaymentError('Ошибка при создании платежа');
+                showPaymentError('Ошибка при создании платежа: ' + error.message);
+                
+                // Восстанавливаем кнопку
+                document.getElementById('pay-button').style.display = 'block';
+                document.getElementById('payment-loading').style.display = 'none';
             }
         }
 
-        // Обработка успешного платежа
-        function processSuccessfulPayment(amount) {
+        // 🔄 Проверка статуса платежа
+        async function checkPaymentStatus(payment_id, user_id) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/payment/status/${payment_id}`);
+                const result = await response.json();
+                
+                if (result.status === 'succeeded') {
+                    // Платеж успешен
+                    processSuccessfulPayment(selectedAmount, user_id);
+                } else if (result.status === 'pending') {
+                    // Платеж еще в процессе - продолжаем проверять
+                    showAlert('Платеж обрабатывается... Проверяем статус...');
+                    setTimeout(() => checkPaymentStatus(payment_id, user_id), 3000);
+                } else if (result.status === 'canceled') {
+                    // Платеж отменен
+                    showPaymentError('Платеж отменен');
+                    resetPaymentUI();
+                } else {
+                    // Другие статусы
+                    showAlert(`Статус платежа: ${result.status}`);
+                    setTimeout(() => checkPaymentStatus(payment_id, user_id), 3000);
+                }
+            } catch (error) {
+                console.error('Ошибка проверки статуса:', error);
+                setTimeout(() => checkPaymentStatus(payment_id, user_id), 3000);
+            }
+        }
+
+        // ✅ Обработка успешного платежа
+        function processSuccessfulPayment(amount, user_id) {
+            // Скрываем секцию оплаты
+            document.getElementById('payment-section').style.display = 'none';
+            document.getElementById('payment-loading').style.display = 'none';
+            
+            // Показываем успех
+            document.getElementById('payment-success').style.display = 'block';
+            
             // Обновляем баланс
             const currentBalance = parseInt(document.getElementById('balance').textContent);
             const newBalance = currentBalance + amount;
             document.getElementById('balance').textContent = newBalance;
             
-            // Показываем успех
-            document.getElementById('payment-section').style.display = 'none';
-            document.getElementById('payment-success').style.display = 'block';
-            
             // Уведомляем пользователя
             showAlert(`✅ Баланс успешно пополнен на ${amount} руб!\n\nНовый баланс: ${newBalance} руб`);
             
-            // Можно отправить данные в бота
+            // Отправляем данные в Telegram бота (опционально)
             if (tg && tg.sendData) {
                 const data = {
                     action: 'payment_success',
                     amount: amount,
                     new_balance: newBalance,
-                    user_id: tg.initDataUnsafe?.user?.id
+                    user_id: user_id
                 };
                 tg.sendData(JSON.stringify(data));
             }
         }
 
         function showPaymentError(message) {
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'payment-error';
-            errorDiv.textContent = message;
-            document.getElementById('checkout-container').appendChild(errorDiv);
-            
-            setTimeout(() => {
-                errorDiv.remove();
-            }, 5000);
+            document.getElementById('payment-error').style.display = 'block';
+            document.getElementById('payment-error').textContent = message;
+            document.getElementById('payment-loading').style.display = 'none';
+            document.getElementById('pay-button').style.display = 'block';
+        }
+
+        function resetPaymentUI() {
+            document.getElementById('payment-loading').style.display = 'none';
+            document.getElementById('pay-button').style.display = 'block';
+            document.getElementById('payment-error').style.display = 'none';
         }
         
         function showAlert(message) {
@@ -375,6 +459,8 @@
                 const user = tg.initDataUnsafe?.user;
                 if (user) {
                     console.log('Telegram User:', user);
+                    // Загружаем баланс пользователя
+                    loadUserBalance();
                 }
             }
         });
